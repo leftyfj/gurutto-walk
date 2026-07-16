@@ -3,12 +3,15 @@ import { Button, CircularProgress, Container, Typography, Box } from '@mui/mater
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { GoogleMapArea } from './components/GoogleMapArea';
+import { generateSquareRoute } from './lib/route/generateSquareRoute';
+import { getWalingRoute } from './lib/route/getWalkingRoute';
+import type { LatLngLiteral } from './types/route';
 import '../styles/App.scss'
 
 function App() {
-   const [user, setUser] = useState<User | null>(null);
-   const [isAuthLoading, setIsAuthLoading] = useState(true);
-
+    const [user, setUser] = useState<User | null>(null);
+    const [isAuthLoading, setIsAuthLoading] = useState(true);
+    const [currentLocation, setCurrentLocation] = useState<LatLngLiteral | null>(null);
    useEffect(() => {
        const initializeAuth = async () => {
            const { data: { session }, error } = await supabase.auth.getSession();
@@ -32,6 +35,57 @@ function App() {
 
        return () => subscription.unsubscribe();
    }, []);
+
+   useEffect(() => {
+       navigator.geolocation.getCurrentPosition(
+           (position) => {
+               const location = {
+                   lat: position.coords.latitude,
+                   lng: position.coords.longitude
+               };
+
+               setCurrentLocation(location);
+           },
+           (error) => {
+               console.error('現在地を取得できませんでした', error);
+           }
+       );
+   }, []);
+
+   useEffect(() => {
+       if (!currentLocation) {
+           return;
+       }
+
+       const fetchWalingRoute = async() => {
+        try{
+            const squareRoute = generateSquareRoute(
+                currentLocation,
+                3000,
+                0
+            );
+
+            console.log('生成したwaypoint', squareRoute);
+            const walikingRoute = await getWalingRoute(
+                currentLocation,
+                squareRoute
+            );
+            console.log('実際の徒歩距離',walikingRoute.distanceMeters);
+
+        } catch(error){
+            console.error('徒歩ルートの取得に失敗しました',error);
+        }
+
+       };
+       fetchWalingRoute();
+    //    const route = generateSquareRoute(currentLocation, 3000, bearing);
+    //    const initialBearings= [0,120,240];
+    //    const routes = initialBearings.map((bearing)=>
+    //     generateSquareRoute(currentLocation, 3000, bearing)
+
+    // );
+    //    console.log('生成したルート', routes);
+   }, [currentLocation]);
 
    const handleGoogleLogin = async () => {
        const { error } = await supabase.auth.signInWithOAuth({
@@ -64,46 +118,41 @@ function App() {
               <br />
               今いる場所から戻ってこられる散歩コースをご案内します。
           </Typography>
+          {currentLocation ? (
+              <Typography align="center">
+                  現在地：{currentLocation.lat}, {currentLocation.lng}
+              </Typography>
+          ) : (
+              <p>現在地を取得しています...</p>
+          )}
           <Box sx={{ textAlign: 'center' }}>
-              {/* <Button
-                  className="google-login-button"
-                  variant="contained"
-                  onClick={user ? undefined : handleGoogleLogin}
-                  disabled={isAuthLoading || Boolean(user)}
-                  startIcon={isAuthLoading ? <CircularProgress size={18} color="inherit" /> : undefined}
-              >
-                  {isAuthLoading
-                      ? 'ログイン状態を確認中'
-                      : user
-                          ? `${displayName}さん、ログイン中`
-                          : 'Googleアカウントでログイン'}
-              </Button> */}
               {isAuthLoading ? (
-                <Button
-                    variant='contained'
-                    disabled
-                    startIcon={
-                        <CircularProgress size={18} color="inherit"/>
-                    }
-                    >
-                        ログイン状態を確認中
-                    </Button>
-                    ): user ? (
-                        <>
-                            <Typography sx={{mb : 2}}>
-                                {displayName}さん、ログイン中
-                            </Typography>
-                            <Box sx={{mt : 3}}>
-                                {/* Googleマップをここに表示 */}
-                               <GoogleMapArea />
-                            </Box>
-                        </>
-                    ):(
-                        <Button className='google-login-button' variant='contained' onClick={handleGoogleLogin}>
-                            Googleアカウントでログイン
-                        </Button>
-                    )
-              }
+                  <Button
+                      variant="contained"
+                      disabled
+                      startIcon={<CircularProgress size={18} color="inherit" />}
+                  >
+                      ログイン状態を確認中
+                  </Button>
+              ) : user ? (
+                  <>
+                      <Typography sx={{ mb: 2 }}>
+                          {displayName}さん、ログイン中
+                      </Typography>
+                      <Box sx={{ mt: 3 }}>
+                          {/* Googleマップをここに表示 */}
+                          <GoogleMapArea />
+                      </Box>
+                  </>
+              ) : (
+                  <Button
+                      className="google-login-button"
+                      variant="contained"
+                      onClick={handleGoogleLogin}
+                  >
+                      Googleアカウントでログイン
+                  </Button>
+              )}
           </Box>
       </Container>
   );
