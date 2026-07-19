@@ -78,6 +78,13 @@ function App() {
        }
    };
 
+   const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if(error) {
+        console.error('ログアウトに失敗しました', error.message);
+    }
+   }
    const displayName = user
        ? user.user_metadata.full_name
            ?? user.user_metadata.name
@@ -117,6 +124,13 @@ function App() {
                       <Typography sx={{ mb: 2 }}>
                           {displayName}さん、ログイン中
                       </Typography>
+                      <Button
+                          variant="outlined"
+                          onClick={handleLogout}
+                          sx={{ mb: 3 }}
+                      >
+                          ログアウト
+                      </Button>
                       <Box sx={{ mt: 3 }}>
                           {/* Googleマップをここに表示 */}
                           <GoogleMapArea />
