@@ -42,19 +42,44 @@ function App() {
        }
 
        const fetchWalingRoute = async() => {
+        const baseBearing = Math.floor(Math.random() * 360);
+        // const baseBearing = 0;
+        const initialBearings = [
+            baseBearing,
+            (baseBearing + 120) % 360,
+            (baseBearing + 240) % 360
+        ];
         try{
-            const squareRoute = generateSquareRoute(
-                currentLocation,
-                3000,
-                0
+            const squareRoutes = initialBearings.map((bearing) =>
+                generateSquareRoute(
+                    currentLocation,
+                    3000,
+                    bearing
+                )
             );
 
-            console.log('生成したwaypoint', squareRoute);
-            const walikingRoute = await getWalingRoute(
-                currentLocation,
-                squareRoute
+            const walkingRoutes = await Promise.all(
+                squareRoutes.map((squareRoute) =>
+                    getWalingRoute(
+                        currentLocation,
+                        squareRoute
+                    )
+                )
             );
-            console.log('実際の徒歩距離',walikingRoute.distanceMeters);
+            //  console.log('最初の方角', baseBearing);
+            console.log('正方形のルート', squareRoutes);
+            console.log('Google Mapsの徒歩ルート',walkingRoutes);
+              walkingRoutes.forEach((route, index) => {
+                  console.log(
+                      `ルート${index + 1}の実際の徒歩距離`,
+                      route.distanceMeters
+                  );
+              });
+            // const walikingRoute = await getWalingRoute(
+            //     currentLocation,
+            //     squareRoute
+            // );
+            // console.log('実際の徒歩距離',walikingRoute.distanceMeters);
 
         } catch(error){
             console.error('徒歩ルートの取得に失敗しました',error);

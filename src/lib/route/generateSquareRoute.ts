@@ -1,6 +1,6 @@
 import type { LatLngLiteral } from "@/types/route";
 import { calculateDestination } from "./calculateDestination";
-
+const DISTANCE_CORRECTION_RATE = 0.8;
 export type SquareRoute = {
     initialBearing: number;
     waypoints:LatLngLiteral[];
@@ -11,7 +11,8 @@ export const generateSquareRoute = (
     targetDistanceMeters: number,
     initialBearing: number
 ):SquareRoute => {
-    const sideLength = targetDistanceMeters / 4;
+    // const sideLength = targetDistanceMeters / 4;
+    const sideLength = (targetDistanceMeters * DISTANCE_CORRECTION_RATE) / 4;
     const waypoint1 = calculateDestination(
         origin,
         sideLength,
