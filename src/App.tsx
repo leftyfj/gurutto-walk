@@ -5,13 +5,13 @@ import { supabase } from './lib/supabase';
 import { GoogleMapArea } from './components/GoogleMapArea';
 import { generateSquareRoute } from './lib/route/generateSquareRoute';
 import { getWalingRoute } from './lib/route/getWalkingRoute';
-import type { LatLngLiteral } from './types/route';
+import { useCurrentLocation } from './hooks/useCurrentLocation';
 import '../styles/App.scss'
 
 function App() {
     const [user, setUser] = useState<User | null>(null);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [currentLocation, setCurrentLocation] = useState<LatLngLiteral | null>(null);
+    const currentLocation = useCurrentLocation();
    useEffect(() => {
        const initializeAuth = async () => {
            const { data: { session }, error } = await supabase.auth.getSession();
@@ -34,22 +34,6 @@ function App() {
        );
 
        return () => subscription.unsubscribe();
-   }, []);
-
-   useEffect(() => {
-       navigator.geolocation.getCurrentPosition(
-           (position) => {
-               const location = {
-                   lat: position.coords.latitude,
-                   lng: position.coords.longitude
-               };
-
-               setCurrentLocation(location);
-           },
-           (error) => {
-               console.error('現在地を取得できませんでした', error);
-           }
-       );
    }, []);
 
    useEffect(() => {
@@ -78,13 +62,7 @@ function App() {
 
        };
        fetchWalingRoute();
-    //    const route = generateSquareRoute(currentLocation, 3000, bearing);
-    //    const initialBearings= [0,120,240];
-    //    const routes = initialBearings.map((bearing)=>
-    //     generateSquareRoute(currentLocation, 3000, bearing)
 
-    // );
-    //    console.log('生成したルート', routes);
    }, [currentLocation]);
 
    const handleGoogleLogin = async () => {
