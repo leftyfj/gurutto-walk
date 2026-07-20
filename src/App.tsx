@@ -9,12 +9,14 @@ import { getWalingRoute } from './lib/route/getWalkingRoute';
 import { useCurrentLocation } from './hooks/useCurrentLocation';
 import '../styles/App.scss'
 const TARGET_DISTANCE_METERS = 3000;
+
 function App() {
     const [user, setUser] = useState<User | null>(null);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [routeCandidates, setRouteCandidates] = useState<WalkingRouteCandidate[]>([]);
     const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
     const [selectedRoute, setSelectedRoute] = useState<WalkingRouteCandidate | null>(null);
+    const [isGeneratingRoutes, setIsGeneratingRoutes] = useState(false);
     const currentLocation = useCurrentLocation();
    useEffect(() => {
        const initializeAuth = async () => {
@@ -40,27 +42,27 @@ function App() {
        return () => subscription.unsubscribe();
    }, []);
 
-   useEffect(() => {
-       if (!currentLocation) {
-           return;
-       }
+   const generateRouteCandidates = async () => {
+        if (!currentLocation || isGeneratingRoutes) {
+            return;
+        }
+        setIsGeneratingRoutes(true);
+        try{
+        const baseBearing = Math.floor(Math.random() * 360);
 
-       const fetchWalingRoute = async() => {
-        // const baseBearing = Math.floor(Math.random() * 360);
-        const baseBearing = 0;
         const initialBearings = [
             baseBearing,
             (baseBearing + 120) % 360,
             (baseBearing + 240) % 360
         ];
-        try{
-            const squareRoutes = initialBearings.map((bearing) =>
-                generateSquareRoute(
-                    currentLocation,
-                    TARGET_DISTANCE_METERS,
-                    bearing
-                )
-            );
+
+        const squareRoutes = initialBearings.map((bearing) =>
+            generateSquareRoute(
+                currentLocation,
+                TARGET_DISTANCE_METERS,
+                bearing
+            )
+        );
 
             const candidates: WalkingRouteCandidate[] = await Promise.all(
                 squareRoutes.map( async (squareRoute, index) => {
@@ -79,48 +81,26 @@ function App() {
             );
 
             setRouteCandidates(candidates);
+            setSelectedRoute(null);
             setIsRouteDialogOpen(true);
-            console.log('ルート候補', candidates);
+            console.log('基準方角', baseBearing);
+            console.log('再生成したルート候補', candidates);
+            } catch(error){
+                console.error('徒歩ルートの取得に失敗しました',error);
+            } finally {
+                setIsGeneratingRoutes(false);
+            }
 
-            // const walkingRoutes = await Promise.all(
-            //     squareRoutes.map((squareRoute) =>
-            //         getWalingRoute(
-            //             currentLocation,
-            //             squareRoute
-            //         )
-            //     )
-            // );
-            //  console.log('最初の方角', baseBearing);
-            // console.log('正方形のルート', squareRoutes);
-            // console.log('Google Mapsの徒歩ルート',walkingRoutes);
-            //   walkingRoutes.forEach((route, index) => {
-            //       console.log(
-            //           `ルート${index + 1}の実際の徒歩距離`,
-            //           route.distanceMeters
-            //       );
-            //   });
-            // const walikingRoute = await getWalingRoute(
-            //     currentLocation,
-            //     squareRoute
-            // );
-            // console.log('実際の徒歩距離',walikingRoute.distanceMeters);
+    };
 
-        } catch(error){
-            console.error('徒歩ルートの取得に失敗しました',error);
-        }
+   useEffect(() => {
+       if (!currentLocation) {
+           return;
+       }
 
-       };
-       fetchWalingRoute();
-
+       generateRouteCandidates();
    }, [currentLocation]);
 
-   useEffect(() =>{
-      if (!selectedRoute) {
-          return;
-      }
-
-      console.log('選択したルート', selectedRoute);
-   }),[setSelectedRoute]
    const handleGoogleLogin = async () => {
        const { error } = await supabase.auth.signInWithOAuth({
            provider: 'google',
@@ -141,6 +121,7 @@ function App() {
         console.error('ログアウトに失敗しました', error.message);
     }
    }
+
 
    const displayName = user
        ? user.user_metadata.full_name
@@ -272,6 +253,12 @@ function App() {
               </DialogContent>
 
               <DialogActions>
+                  <Button
+                      onClick={generateRouteCandidates}
+                      disabled={isGeneratingRoutes}
+                  >
+                      {isGeneratingRoutes ? '生成中...' : '別のルートを再生成'}
+                  </Button>
                   <Button onClick={() => setIsRouteDialogOpen(false)}>
                       閉じる
                   </Button>
