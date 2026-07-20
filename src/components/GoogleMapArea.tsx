@@ -1,16 +1,24 @@
 import{ useEffect, useState } from 'react';
 import { AdvancedMarker, APIProvider, Map } from "@vis.gl/react-google-maps";
 import { Alert, Box, CircularProgress, Typography } from '@mui/material';
-const TOKYO_STATION = {
-    lat: 35.681236,
-    lng: 139.767125
-};
+import { SelectedRoutePolyline } from './SelectedRoutePolyline';
+import type { WalkingRouteCandidate } from '../types/route';
+// const TOKYO_STATION = {
+//     lat: 35.681236,
+//     lng: 139.767125
+// };
 type Position = {
     lat: number;
     lng: number;
 };
 
-export const GoogleMapArea = () => {
+type GoogleMapAreaProps = {
+    selectedRoute: WalkingRouteCandidate | null;
+};
+
+export const GoogleMapArea = ({
+    selectedRoute
+}:GoogleMapAreaProps) => {
  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
  const [currentPosition, setCurrentPosition] = useState<Position | null>(null);
@@ -107,6 +115,7 @@ export const GoogleMapArea = () => {
                 gestureHandling="greedy"
             >
                 <AdvancedMarker position={currentPosition} title="現在地" />
+                <SelectedRoutePolyline selectedRoute={selectedRoute} />
             </Map>
         </APIProvider>
     );

@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Button, CircularProgress, Container, Typography, Box } from '@mui/material';
+import { Button, CircularProgress, Container, Typography, Box, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from '@mui/material';
 import type { User } from '@supabase/supabase-js';
+import type { WalkingRouteCandidate } from './types/route';
 import { supabase } from './lib/supabase';
 import { GoogleMapArea } from './components/GoogleMapArea';
 import { generateSquareRoute } from './lib/route/generateSquareRoute';
 import { getWalingRoute } from './lib/route/getWalkingRoute';
 import { useCurrentLocation } from './hooks/useCurrentLocation';
 import '../styles/App.scss'
-
+const TARGET_DISTANCE_METERS = 3000;
 function App() {
     const [user, setUser] = useState<User | null>(null);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
+    const [routeCandidates, setRouteCandidates] = useState<WalkingRouteCandidate[]>([]);
+    const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
+    const [selectedRoute, setSelectedRoute] = useState<WalkingRouteCandidate | null>(null);
     const currentLocation = useCurrentLocation();
    useEffect(() => {
        const initializeAuth = async () => {
@@ -42,8 +46,8 @@ function App() {
        }
 
        const fetchWalingRoute = async() => {
-        const baseBearing = Math.floor(Math.random() * 360);
-        // const baseBearing = 0;
+        // const baseBearing = Math.floor(Math.random() * 360);
+        const baseBearing = 0;
         const initialBearings = [
             baseBearing,
             (baseBearing + 120) % 360,
@@ -53,28 +57,48 @@ function App() {
             const squareRoutes = initialBearings.map((bearing) =>
                 generateSquareRoute(
                     currentLocation,
-                    3000,
+                    TARGET_DISTANCE_METERS,
                     bearing
                 )
             );
 
-            const walkingRoutes = await Promise.all(
-                squareRoutes.map((squareRoute) =>
-                    getWalingRoute(
+            const candidates: WalkingRouteCandidate[] = await Promise.all(
+                squareRoutes.map( async (squareRoute, index) => {
+                    const walkingRoute = await getWalingRoute(
                         currentLocation,
                         squareRoute
-                    )
-                )
+                    );
+                    return {
+                        id: index + 1,
+                        initialBearing: squareRoute.initialBearing,
+                        waypoints: squareRoute.waypoints,
+                        actualDistanceMeters: walkingRoute.distanceMeters ?? 0,
+                        googleRoute: walkingRoute
+                    };
+                })
             );
+
+            setRouteCandidates(candidates);
+            setIsRouteDialogOpen(true);
+            console.log('ルート候補', candidates);
+
+            // const walkingRoutes = await Promise.all(
+            //     squareRoutes.map((squareRoute) =>
+            //         getWalingRoute(
+            //             currentLocation,
+            //             squareRoute
+            //         )
+            //     )
+            // );
             //  console.log('最初の方角', baseBearing);
-            console.log('正方形のルート', squareRoutes);
-            console.log('Google Mapsの徒歩ルート',walkingRoutes);
-              walkingRoutes.forEach((route, index) => {
-                  console.log(
-                      `ルート${index + 1}の実際の徒歩距離`,
-                      route.distanceMeters
-                  );
-              });
+            // console.log('正方形のルート', squareRoutes);
+            // console.log('Google Mapsの徒歩ルート',walkingRoutes);
+            //   walkingRoutes.forEach((route, index) => {
+            //       console.log(
+            //           `ルート${index + 1}の実際の徒歩距離`,
+            //           route.distanceMeters
+            //       );
+            //   });
             // const walikingRoute = await getWalingRoute(
             //     currentLocation,
             //     squareRoute
@@ -90,6 +114,13 @@ function App() {
 
    }, [currentLocation]);
 
+   useEffect(() =>{
+      if (!selectedRoute) {
+          return;
+      }
+
+      console.log('選択したルート', selectedRoute);
+   }),[setSelectedRoute]
    const handleGoogleLogin = async () => {
        const { error } = await supabase.auth.signInWithOAuth({
            provider: 'google',
@@ -110,6 +141,7 @@ function App() {
         console.error('ログアウトに失敗しました', error.message);
     }
    }
+
    const displayName = user
        ? user.user_metadata.full_name
            ?? user.user_metadata.name
@@ -118,60 +150,134 @@ function App() {
        : null;
 
   return (
-      <Container maxWidth="sm" sx={{ py: 8 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-              <span className="app-title__main">ぐるっと散歩</span>
-              <span className="app-title__sub">Gurutto Walk</span>
-          </Typography>
-          <Typography align="center" sx={{ mb: 3 }}>
-              歩きたい距離を選ぶだけ。
-              <br />
-              今いる場所から戻ってこられる散歩コースをご案内します。
-          </Typography>
-          {currentLocation ? (
-              <Typography align="center">
-                  現在地：{currentLocation.lat}, {currentLocation.lng}
+      <>
+          <Container maxWidth="sm" sx={{ py: 8 }}>
+              <Typography variant="h4" component="h1" gutterBottom>
+                  <span className="app-title__main">ぐるっと散歩</span>
+                  <span className="app-title__sub">Gurutto Walk</span>
               </Typography>
-          ) : (
-              <p>現在地を取得しています...</p>
-          )}
-          <Box sx={{ textAlign: 'center' }}>
-              {isAuthLoading ? (
-                  <Button
-                      variant="contained"
-                      disabled
-                      startIcon={<CircularProgress size={18} color="inherit" />}
-                  >
-                      ログイン状態を確認中
-                  </Button>
-              ) : user ? (
-                  <>
-                      <Typography sx={{ mb: 2 }}>
-                          {displayName}さん、ログイン中
-                      </Typography>
-                      <Button
-                          variant="outlined"
-                          onClick={handleLogout}
-                          sx={{ mb: 3 }}
-                      >
-                          ログアウト
-                      </Button>
-                      <Box sx={{ mt: 3 }}>
-                          {/* Googleマップをここに表示 */}
-                          <GoogleMapArea />
-                      </Box>
-                  </>
+              <Typography align="center" sx={{ mb: 3 }}>
+                  歩きたい距離を選ぶだけ。
+                  <br />
+                  今いる場所から戻ってこられる散歩コースをご案内します。
+              </Typography>
+              {currentLocation ? (
+                  <Typography align="center">
+                      現在地：{currentLocation.lat}, {currentLocation.lng}
+                  </Typography>
               ) : (
-                  <Button
-                      className="google-login-button"
-                      variant="contained"
-                      onClick={handleGoogleLogin}
-                  >
-                      Googleアカウントでログイン
-                  </Button>
+                  <p>現在地を取得しています...</p>
               )}
-          </Box>
-      </Container>
+
+              <Box sx={{ textAlign: 'center' }}>
+                  {isAuthLoading ? (
+                      <Button
+                          variant="contained"
+                          disabled
+                          startIcon={
+                              <CircularProgress size={18} color="inherit" />
+                          }
+                      >
+                          ログイン状態を確認中
+                      </Button>
+                  ) : user ? (
+                      <>
+                          <Typography sx={{ mb: 2 }}>
+                              {displayName}さん、ログイン中
+                          </Typography>
+                          <Button
+                              variant="outlined"
+                              onClick={handleLogout}
+                              sx={{ mb: 3 }}
+                          >
+                              ログアウト
+                          </Button>
+                          <Box sx={{ mt: 3 }}>
+                              {/* Googleマップをここに表示 */}
+                              <GoogleMapArea selectedRoute={selectedRoute} />
+                          </Box>
+                      </>
+                  ) : (
+                      <Button
+                          className="google-login-button"
+                          variant="contained"
+                          onClick={handleGoogleLogin}
+                      >
+                          Googleアカウントでログイン
+                      </Button>
+                  )}
+              </Box>
+          </Container>
+          <Dialog
+              open={isRouteDialogOpen}
+              onClose={() => setIsRouteDialogOpen(false)}
+              fullWidth
+              maxWidth="sm"
+          >
+              <DialogTitle>3つのルートを生成しました</DialogTitle>
+
+              <DialogContent>
+                  <Typography sx={{ mb: 2 }}>
+                      希望距離：
+                      {TARGET_DISTANCE_METERS.toLocaleString()}m
+                  </Typography>
+
+                  <Stack spacing={2}>
+                      {routeCandidates.map((candidate) => {
+                          const difference =
+                              candidate.actualDistanceMeters -
+                              TARGET_DISTANCE_METERS;
+
+                          const formattedDifference =
+                              difference === 0
+                                  ? '±0m'
+                                  : difference > 0
+                                    ? `+${difference.toLocaleString()}m`
+                                    : `${difference.toLocaleString()}m`;
+
+                          return (
+                              <Stack
+                                  key={candidate.id}
+                                  direction="row"
+                                  sx={{
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between'
+                                  }}
+                                  spacing={2}
+                              >
+                                  <Typography>ルート{candidate.id}</Typography>
+
+                                  <Typography>
+                                      {candidate.actualDistanceMeters.toLocaleString()}
+                                      m
+                                  </Typography>
+
+                                  <Typography>
+                                      希望距離との差：
+                                      {formattedDifference}
+                                  </Typography>
+                                  <Button
+                                      variant="contained"
+                                      onClick={() => {
+                                          setSelectedRoute(candidate);
+                                          setIsRouteDialogOpen(false);
+                                      }}
+                                  >
+                                      このルートを選ぶ
+                                  </Button>
+                              </Stack>
+                          );
+                      })}
+                  </Stack>
+              </DialogContent>
+
+              <DialogActions>
+                  <Button onClick={() => setIsRouteDialogOpen(false)}>
+                      閉じる
+                  </Button>
+              </DialogActions>
+          </Dialog>
+      </>
   );
 }
 

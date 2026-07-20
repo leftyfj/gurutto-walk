@@ -19,7 +19,7 @@ import type { SquareRoute } from "./generateSquareRoute";
 
          travelMode: 'WALKING',
 
-         fields: ['distanceMeters']
+         fields: ['distanceMeters','path']
      };
 
      const { routes } = await Route.computeRoutes(request);
