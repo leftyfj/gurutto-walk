@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Button, CircularProgress, Container, Typography, Box, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import GoogleIcon from '@mui/icons-material/Google';
+import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
 import type { User } from '@supabase/supabase-js';
 import type { WalkingRouteCandidate } from './types/route';
 import { supabase } from './lib/supabase';
@@ -8,14 +11,15 @@ import { generateSquareRoute } from './lib/route/generateSquareRoute';
 import { getWalingRoute } from './lib/route/getWalkingRoute';
 import { useCurrentLocation } from './hooks/useCurrentLocation';
 import '../styles/App.scss'
-const TARGET_DISTANCE_METERS = 3000;
+const TARGET_DISTANCE_METERS = 1000;
 
 function App() {
     const [user, setUser] = useState<User | null>(null);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [routeCandidates, setRouteCandidates] = useState<WalkingRouteCandidate[]>([]);
-    const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
     const [selectedRoute, setSelectedRoute] = useState<WalkingRouteCandidate | null>(null);
+    const [previousRoute, setPreviousRoute] = useState<WalkingRouteCandidate | null>(null);
+    const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
     const [isGeneratingRoutes, setIsGeneratingRoutes] = useState(false);
     const currentLocation = useCurrentLocation();
    useEffect(() => {
@@ -101,6 +105,16 @@ function App() {
        generateRouteCandidates();
    }, [currentLocation]);
 
+   const handleRegenerateRoutes = async () => {
+       // 現在表示しているルートを退避
+       setPreviousRoute(selectedRoute);
+       // 地図上のルートを一旦消す
+       setSelectedRoute(null);
+       setRouteCandidates([]);
+
+       await generateRouteCandidates();
+   };
+
    const handleGoogleLogin = async () => {
        const { error } = await supabase.auth.signInWithOAuth({
            provider: 'google',
@@ -122,7 +136,39 @@ function App() {
     }
    }
 
+    const handleCloseDialog = () => {
+        setIsRouteDialogOpen(false);
+        if (!selectedRoute && previousRoute) {
+            setSelectedRoute(previousRoute);
+        }
 
+        setPreviousRoute(null);
+    };
+
+    const handleSelectRoute = (route: WalkingRouteCandidate) => {
+        setSelectedRoute(route);
+        setPreviousRoute(null);
+        setIsRouteDialogOpen(false);
+    };
+
+    const handleOpenGoogleMaps = () => {
+        if (!currentLocation || !selectedRoute) {
+            return;
+        }
+
+        const origin = `${currentLocation.lat},${currentLocation.lng}`;
+        const destination = origin; //出発地に戻ってくるため、出発地=目的地になる
+        const waypoints = selectedRoute.waypoints
+             .map((waypoint) => `${waypoint.lat},${waypoint.lng}`)
+             .join('|');
+        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1` +
+            `&origin=${encodeURIComponent(origin)}` +
+            `&destination=${encodeURIComponent(destination)}` +
+            `&waypoints=${encodeURIComponent(waypoints)}` +
+            `&travelmode=walking`;
+            console.log(googleMapsUrl);
+             window.open(googleMapsUrl, '_blank');
+    };
    const displayName = user
        ? user.user_metadata.full_name
            ?? user.user_metadata.name
@@ -142,13 +188,13 @@ function App() {
                   <br />
                   今いる場所から戻ってこられる散歩コースをご案内します。
               </Typography>
-              {currentLocation ? (
+              {/* {currentLocation ? (
                   <Typography align="center">
                       現在地：{currentLocation.lat}, {currentLocation.lng}
                   </Typography>
               ) : (
                   <p>現在地を取得しています...</p>
-              )}
+              )} */}
 
               <Box sx={{ textAlign: 'center' }}>
                   {isAuthLoading ? (
@@ -163,26 +209,69 @@ function App() {
                       </Button>
                   ) : user ? (
                       <>
-                          <Typography sx={{ mb: 2 }}>
+                          <Typography sx={{ mb: 1 }}>
                               {displayName}さん、ログイン中
                           </Typography>
                           <Button
-                              variant="outlined"
+                              variant="text"
+                              size="small"
                               onClick={handleLogout}
-                              sx={{ mb: 3 }}
+                              sx={{
+                                  mb: 0,
+                                  color: 'text.secondary',
+                                  textTransform: 'none'
+                              }}
                           >
                               ログアウト
                           </Button>
-                          <Box sx={{ mt: 3 }}>
+
+                          <Box sx={{ mt: 1 }}>
+                              <Button
+                                  size="small"
+                                  variant="contained"
+                                  startIcon={<RefreshIcon />}
+                                  onClick={handleRegenerateRoutes}
+                                  disabled={
+                                      !currentLocation || isGeneratingRoutes
+                                  }
+                                  sx={{ mb: 1 }}
+                              >
+                                  {isGeneratingRoutes
+                                      ? '生成中...'
+                                      : '新たにルートを生成'}
+                              </Button>
                               {/* Googleマップをここに表示 */}
                               <GoogleMapArea selectedRoute={selectedRoute} />
+                              {selectedRoute && (
+                                  <Button
+                                      variant="contained"
+                                      startIcon={<DirectionsWalkIcon />}
+                                      onClick={handleOpenGoogleMaps}
+                                      sx={{ mt: 1 }}
+                                  >
+                                      Googleマップで歩く
+                                  </Button>
+                              )}
                           </Box>
                       </>
                   ) : (
                       <Button
                           className="google-login-button"
-                          variant="contained"
+                          variant="outlined"
+                          startIcon={<GoogleIcon />}
                           onClick={handleGoogleLogin}
+                          sx={{
+                              color: 'text.primary',
+                              borderColor: 'divider',
+                              backgroundColor: 'background.paper',
+                              textTransform: 'none',
+                              px: 3,
+                              py: 1.2,
+                              '&:hover': {
+                                  backgroundColor: 'action.hover',
+                                  borderColor: 'text.secondary'
+                              }
+                          }}
                       >
                           Googleアカウントでログイン
                       </Button>
@@ -191,7 +280,8 @@ function App() {
           </Container>
           <Dialog
               open={isRouteDialogOpen}
-              onClose={() => setIsRouteDialogOpen(false)}
+              //   onClose={() => setIsRouteDialogOpen(false)}
+              onClose={handleCloseDialog}
               fullWidth
               maxWidth="sm"
           >
@@ -238,11 +328,11 @@ function App() {
                                       {formattedDifference}
                                   </Typography>
                                   <Button
+                                      size="small"
                                       variant="contained"
-                                      onClick={() => {
-                                          setSelectedRoute(candidate);
-                                          setIsRouteDialogOpen(false);
-                                      }}
+                                      onClick={() =>
+                                          handleSelectRoute(candidate)
+                                      }
                                   >
                                       このルートを選ぶ
                                   </Button>
@@ -254,14 +344,15 @@ function App() {
 
               <DialogActions>
                   <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<RefreshIcon />}
                       onClick={generateRouteCandidates}
                       disabled={isGeneratingRoutes}
                   >
                       {isGeneratingRoutes ? '生成中...' : '別のルートを再生成'}
                   </Button>
-                  <Button onClick={() => setIsRouteDialogOpen(false)}>
-                      閉じる
-                  </Button>
+                  <Button onClick={handleCloseDialog}>閉じる</Button>
               </DialogActions>
           </Dialog>
       </>
