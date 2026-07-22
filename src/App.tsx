@@ -68,21 +68,21 @@ function App() {
             )
         );
 
-            const candidates: WalkingRouteCandidate[] = await Promise.all(
-                squareRoutes.map( async (squareRoute, index) => {
-                    const walkingRoute = await getWalingRoute(
-                        currentLocation,
-                        squareRoute
-                    );
-                    return {
-                        id: index + 1,
-                        initialBearing: squareRoute.initialBearing,
-                        waypoints: squareRoute.waypoints,
-                        actualDistanceMeters: walkingRoute.distanceMeters ?? 0,
-                        googleRoute: walkingRoute
-                    };
-                })
-            );
+        const candidates: WalkingRouteCandidate[] = await Promise.all(
+            squareRoutes.map( async (squareRoute, index) => {
+                const walkingRoute = await getWalingRoute(
+                    currentLocation,
+                    squareRoute
+                );
+                return {
+                    id: index + 1,
+                    initialBearing: squareRoute.initialBearing,
+                    waypoints: squareRoute.waypoints,
+                    actualDistanceMeters: walkingRoute.distanceMeters ?? 0,
+                    googleRoute: walkingRoute
+                };
+            })
+        );
 
             setRouteCandidates(candidates);
             setSelectedRoute(null);
@@ -186,7 +186,7 @@ function App() {
               <Typography align="center" sx={{ mb: 3 }}>
                   歩きたい距離を選ぶだけ。
                   <br />
-                  今いる場所から戻ってこられる散歩コースをご案内します。
+                  今いる場所へ戻って来られる散歩コースをご案内します。
               </Typography>
               {/* {currentLocation ? (
                   <Typography align="center">
