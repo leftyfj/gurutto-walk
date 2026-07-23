@@ -312,19 +312,28 @@ function App() {
                                   direction="row"
                                   sx={{
                                       alignItems: 'center',
-                                      justifyContent: 'space-between'
+                                      justifyContent: 'space-between',
+                                      gap: 1
                                   }}
                                   spacing={2}
                               >
-                                  <Typography>ルート{candidate.id}</Typography>
+                                  {/* <Typography>ルート{candidate.id}</Typography> */}
+                                  <Typography
+                                      sx={{ minWidth: 20, fontWeight: 'bold' }}
+                                  >
+                                      {candidate.id}
+                                  </Typography>
 
-                                  <Typography>
+                                  <Typography sx={{ whiteSpace: 'nowrap' }}>
                                       {candidate.actualDistanceMeters.toLocaleString()}
                                       m
                                   </Typography>
 
-                                  <Typography>
-                                      希望距離との差：
+                                  <Typography
+                                      variant="body2"
+                                      sx={{ flex: 1, textAlign: 'center' }}
+                                  >
+                                      差：
                                       {formattedDifference}
                                   </Typography>
                                   <Button
@@ -333,8 +342,9 @@ function App() {
                                       onClick={() =>
                                           handleSelectRoute(candidate)
                                       }
+                                      sx={{ whiteSpace: 'nowrap' }}
                                   >
-                                      このルートを選ぶ
+                                      選ぶ
                                   </Button>
                               </Stack>
                           );
