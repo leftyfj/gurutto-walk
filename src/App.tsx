@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, CircularProgress, Container, Typography, Box, Dialog, DialogActions, DialogContent, DialogTitle, Stack } from '@mui/material';
+import { Button, CircularProgress, Container, Typography, Box, Dialog, DialogActions, DialogContent, DialogTitle, Stack, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import GoogleIcon from '@mui/icons-material/Google';
 import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
@@ -11,7 +11,7 @@ import { generateSquareRoute } from './lib/route/generateSquareRoute';
 import { getWalingRoute } from './lib/route/getWalkingRoute';
 import { useCurrentLocation } from './hooks/useCurrentLocation';
 import '../styles/App.scss'
-const TARGET_DISTANCE_METERS = 1000;
+// const TARGET_DISTANCE_METERS = 1000;
 
 function App() {
     const [user, setUser] = useState<User | null>(null);
@@ -21,6 +21,7 @@ function App() {
     const [previousRoute, setPreviousRoute] = useState<WalkingRouteCandidate | null>(null);
     const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
     const [isGeneratingRoutes, setIsGeneratingRoutes] = useState(false);
+    const [targetDistanceMeters, setTargetDistanceMeters] = useState(1000);
     const currentLocation = useCurrentLocation();
    useEffect(() => {
        const initializeAuth = async () => {
@@ -63,7 +64,7 @@ function App() {
         const squareRoutes = initialBearings.map((bearing) =>
             generateSquareRoute(
                 currentLocation,
-                TARGET_DISTANCE_METERS,
+                targetDistanceMeters,
                 bearing
             )
         );
@@ -169,6 +170,31 @@ function App() {
             console.log(googleMapsUrl);
              window.open(googleMapsUrl, '_blank');
     };
+
+    const getDirectionLabel = (bearing: number) => {
+        const directions = [
+            '北',
+            '北東',
+            '東',
+            '南東',
+            '南',
+            '南西',
+            '西',
+            '北西'
+        ];
+
+        const index = Math.round(bearing / 45) % 8;
+
+        return directions[index];
+    };
+
+    const handleSelectDistance = (event) => {
+        setTargetDistanceMeters(Number(event.target.value));
+        setSelectedRoute(null);
+        setPreviousRoute(null);
+    }
+
+
    const displayName = user
        ? user.user_metadata.full_name
            ?? user.user_metadata.name
@@ -188,13 +214,6 @@ function App() {
                   <br />
                   今いる場所へ戻って来られる散歩コースをご案内します。
               </Typography>
-              {/* {currentLocation ? (
-                  <Typography align="center">
-                      現在地：{currentLocation.lat}, {currentLocation.lng}
-                  </Typography>
-              ) : (
-                  <p>現在地を取得しています...</p>
-              )} */}
 
               <Box sx={{ textAlign: 'center' }}>
                   {isAuthLoading ? (
@@ -212,19 +231,41 @@ function App() {
                           <Typography sx={{ mb: 1 }}>
                               {displayName}さん、ログイン中
                           </Typography>
-                          <Button
-                              variant="text"
+                          <Box sx={{ my: 1 }}>
+                              <Button
+                                  variant="text"
+                                  size="small"
+                                  onClick={handleLogout}
+                                  sx={{
+                                      mb: 0,
+                                      color: 'text.secondary',
+                                      textTransform: 'none'
+                                  }}
+                              >
+                                  ログアウト
+                              </Button>
+                          </Box>
+                          <FormControl
                               size="small"
-                              onClick={handleLogout}
-                              sx={{
-                                  mb: 0,
-                                  color: 'text.secondary',
-                                  textTransform: 'none'
-                              }}
+                              sx={{ mb: 2, width: '80%' }}
                           >
-                              ログアウト
-                          </Button>
+                              <InputLabel id="distance-select-label">
+                                  歩きたい距離
+                              </InputLabel>
 
+                              <Select
+                                  labelId="distance-select-label"
+                                  value={targetDistanceMeters}
+                                  label="歩きたい距離"
+                                  onChange={handleSelectDistance}
+                              >
+                                  <MenuItem value={1000}>1,000m</MenuItem>
+                                  <MenuItem value={2000}>2,000m</MenuItem>
+                                  <MenuItem value={3000}>3,000m</MenuItem>
+                                  <MenuItem value={4000}>4,000m</MenuItem>
+                                  <MenuItem value={5000}>5,000m</MenuItem>
+                              </Select>
+                          </FormControl>
                           <Box sx={{ mt: 1 }}>
                               <Button
                                   size="small"
@@ -251,6 +292,19 @@ function App() {
                                   >
                                       Googleマップで歩く
                                   </Button>
+                              )}
+                              {selectedRoute && (
+                                  <Typography
+                                      sx={{
+                                          mt: 2,
+                                          fontWeight: 'bold'
+                                      }}
+                                  >
+                                      {getDirectionLabel(
+                                          selectedRoute.initialBearing
+                                      )}
+                                      方向へ歩き始めます
+                                  </Typography>
                               )}
                           </Box>
                       </>
@@ -290,14 +344,14 @@ function App() {
               <DialogContent>
                   <Typography sx={{ mb: 2 }}>
                       希望距離：
-                      {TARGET_DISTANCE_METERS.toLocaleString()}m
+                      {targetDistanceMeters.toLocaleString()}m
                   </Typography>
 
                   <Stack spacing={2}>
                       {routeCandidates.map((candidate) => {
                           const difference =
                               candidate.actualDistanceMeters -
-                              TARGET_DISTANCE_METERS;
+                              targetDistanceMeters;
 
                           const formattedDifference =
                               difference === 0
@@ -317,7 +371,6 @@ function App() {
                                   }}
                                   spacing={2}
                               >
-                                  {/* <Typography>ルート{candidate.id}</Typography> */}
                                   <Typography
                                       sx={{ minWidth: 20, fontWeight: 'bold' }}
                                   >
@@ -328,7 +381,6 @@ function App() {
                                       {candidate.actualDistanceMeters.toLocaleString()}
                                       m
                                   </Typography>
-
                                   <Typography
                                       variant="body2"
                                       sx={{ flex: 1, textAlign: 'center' }}
