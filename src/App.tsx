@@ -5,6 +5,7 @@ import GoogleIcon from '@mui/icons-material/Google';
 import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
 import type { User } from '@supabase/supabase-js';
 import type { WalkingRouteCandidate } from './types/route';
+import type { SelectChangeEvent } from '@mui/material/Select';
 import { supabase } from './lib/supabase';
 import { GoogleMapArea } from './components/GoogleMapArea';
 import { generateSquareRoute } from './lib/route/generateSquareRoute';
@@ -188,7 +189,7 @@ function App() {
         return directions[index];
     };
 
-    const handleSelectDistance = (event) => {
+    const handleSelectDistance = (event:SelectChangeEvent<number>) => {
         setTargetDistanceMeters(Number(event.target.value));
         setSelectedRoute(null);
         setPreviousRoute(null);
@@ -253,7 +254,7 @@ function App() {
                                   歩きたい距離
                               </InputLabel>
 
-                              <Select
+                              <Select<number>
                                   labelId="distance-select-label"
                                   value={targetDistanceMeters}
                                   label="歩きたい距離"
