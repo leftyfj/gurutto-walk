@@ -307,6 +307,10 @@ function App() {
                                       方向へ歩き始めます
                                   </Typography>
                               )}
+                              <Typography variant="caption">
+                                  経由地に到着すると案内が一度止まります。
+                                  「次の目的地」を押して散歩を続けてください。
+                              </Typography>
                           </Box>
                       </>
                   ) : (
