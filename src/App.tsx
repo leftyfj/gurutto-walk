@@ -253,12 +253,11 @@ function App() {
                   <span className="app-title__main">ぐるっと散歩</span>
                   <span className="app-title__sub">Gurutto Walk</span>
               </Typography>
-              <Typography align="center" sx={{ mb: 3 }}>
+              <Typography align="center" sx={{ mb: 2 }}>
                   歩きたい距離を選ぶだけ。
                   <br />
                   今いる場所へ戻って来られる散歩コースをご案内します。
               </Typography>
-
               <Box sx={{ textAlign: 'center' }}>
                   {isAuthLoading ? (
                       <Button
@@ -291,12 +290,11 @@ function App() {
                           </Box>
                           <FormControl
                               size="small"
-                              sx={{ mb: 2, width: '80%' }}
+                              sx={{ mb: 1, width: '80%' }}
                           >
                               <InputLabel id="distance-select-label">
                                   歩きたい距離
                               </InputLabel>
-
                               <Select<number>
                                   labelId="distance-select-label"
                                   value={targetDistanceMeters}
@@ -350,10 +348,6 @@ function App() {
                                       方向へ歩き始めます
                                   </Typography>
                               )}
-                              {/* <Typography variant="caption">
-                                  経由地に到着すると案内が一度止まります。
-                                  「次の目的地」を押して散歩を続けてください。
-                              </Typography> */}
                           </Box>
                       </>
                   ) : (

@@ -129,7 +129,7 @@ export const GoogleMapArea = ({
                 defaultCenter={currentPosition}
                 defaultZoom={16}
                 mapId="DEMO_MAP_ID"
-                style={{ width: '100%', height: '400px', borderRadius: '12px' }}
+                style={{ width: '100%', height: '360px', borderRadius: '12px' }}
                 gestureHandling="greedy"
             >
                 <AdvancedMarker position={currentPosition} title="現在地">
