@@ -190,6 +190,9 @@ function App() {
     };
 
     const openGoogleMaps = () => {
+        if (!currentLocation || !selectedRoute) {
+        return;
+    }
         const origin = `${currentLocation.lat},${currentLocation.lng}`;
         const destination = origin; //出発地に戻ってくるため、出発地=目的地になる
         const waypoints = selectedRoute.waypoints
