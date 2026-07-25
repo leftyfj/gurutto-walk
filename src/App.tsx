@@ -1,5 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Button, CircularProgress, Container, Typography, Box, Dialog, DialogActions, DialogContent, DialogTitle, Stack, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import {
+    Button,
+    CircularProgress,
+    Container,
+    Typography,
+    Box,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Stack,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    DialogContentText,
+    FormControlLabel,
+    Checkbox
+} from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import GoogleIcon from '@mui/icons-material/Google';
 import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
@@ -23,6 +41,8 @@ function App() {
     const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
     const [isGeneratingRoutes, setIsGeneratingRoutes] = useState(false);
     const [targetDistanceMeters, setTargetDistanceMeters] = useState(1000);
+    const [navigationNoticeOpen, setNavigationNoticeOpen] = useState(false);
+    const [doNotShowAgain, setDoNotShowAgain] = useState(false);
     const currentLocation = useCurrentLocation();
    useEffect(() => {
        const initializeAuth = async () => {
@@ -153,11 +173,23 @@ function App() {
         setIsRouteDialogOpen(false);
     };
 
-    const handleOpenGoogleMaps = () => {
+    const handleGoogleMapsClick = () => {
         if (!currentLocation || !selectedRoute) {
             return;
         }
 
+        const noticeHidden = localStorage.getItem('hideGoogleMapsNavigationNotice')==='true';
+
+        if(noticeHidden) {
+            openGoogleMaps();
+            return;
+        }
+
+        setDoNotShowAgain(false);
+        setNavigationNoticeOpen(true);
+    };
+
+    const openGoogleMaps = () => {
         const origin = `${currentLocation.lat},${currentLocation.lng}`;
         const destination = origin; //出発地に戻ってくるため、出発地=目的地になる
         const waypoints = selectedRoute.waypoints
@@ -170,8 +202,16 @@ function App() {
             `&travelmode=walking`;
             console.log(googleMapsUrl);
              window.open(googleMapsUrl, '_blank');
-    };
+    }
 
+    const handleStartNavigation = () => {
+        if (doNotShowAgain) {
+            localStorage.setItem('hideGoogleMapsNavigationNotice', 'true');
+        }
+
+        setNavigationNoticeOpen(false);
+        openGoogleMaps();
+    };
     const getDirectionLabel = (bearing: number) => {
         const directions = [
             '北',
@@ -205,7 +245,7 @@ function App() {
 
   return (
       <>
-          <Container maxWidth="sm" sx={{ py: 8 }}>
+          <Container maxWidth="sm" sx={{ py: 4 }}>
               <Typography variant="h4" component="h1" gutterBottom>
                   <span className="app-title__main">ぐるっと散歩</span>
                   <span className="app-title__sub">Gurutto Walk</span>
@@ -288,7 +328,7 @@ function App() {
                                   <Button
                                       variant="contained"
                                       startIcon={<DirectionsWalkIcon />}
-                                      onClick={handleOpenGoogleMaps}
+                                      onClick={handleGoogleMapsClick}
                                       sx={{ mt: 1 }}
                                   >
                                       Googleマップで歩く
@@ -307,10 +347,10 @@ function App() {
                                       方向へ歩き始めます
                                   </Typography>
                               )}
-                              <Typography variant="caption">
+                              {/* <Typography variant="caption">
                                   経由地に到着すると案内が一度止まります。
                                   「次の目的地」を押して散歩を続けてください。
-                              </Typography>
+                              </Typography> */}
                           </Box>
                       </>
                   ) : (
@@ -420,6 +460,43 @@ function App() {
                       {isGeneratingRoutes ? '生成中...' : '別のルートを再生成'}
                   </Button>
                   <Button onClick={handleCloseDialog}>閉じる</Button>
+              </DialogActions>
+          </Dialog>
+          <Dialog
+              open={navigationNoticeOpen}
+              onClose={() => setNavigationNoticeOpen(false)}
+              fullWidth
+              maxWidth="xs"
+          >
+              <DialogTitle>Googleマップの案内について</DialogTitle>
+
+              <DialogContent>
+                  <DialogContentText>
+                      経由地に到着すると、Googleマップの案内が一度止まります。
+                      画面下の「次の目的地」を押すと、続きのルートが表示されます。
+                      操作するときは、安全な場所に立ち止まってください。
+                  </DialogContentText>
+                  <FormControlLabel
+                      sx={{ mt: 2 }}
+                      control={
+                          <Checkbox
+                              checked={doNotShowAgain}
+                              onChange={(event) =>
+                                  setDoNotShowAgain(event.target.checked)
+                              }
+                          />
+                      }
+                      label="今後この案内を表示しない"
+                  />
+              </DialogContent>
+              <DialogActions>
+                  <Button onClick={() => setNavigationNoticeOpen(false)}>
+                      キャンセル
+                  </Button>
+
+                  <Button variant="contained" onClick={handleStartNavigation}>
+                      Googleマップを開く
+                  </Button>
               </DialogActions>
           </Dialog>
       </>
