@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Container } from '@mui/material';
-import type { User } from '@supabase/supabase-js';
 import type { WalkingRouteCandidate } from './types/route';
 import type { SelectChangeEvent } from '@mui/material/Select';
-import { supabase } from './lib/supabase';
 import { Header } from './components/Header';
 import { AuthSection } from './components/AuthSection';
 import { GuideToGoogleMapsDialog } from './components/GuideToGoogleMapsDialog';
@@ -12,13 +10,13 @@ import { RouteSelectionDialog } from './components/RouteSelectionDialog';
 import { generateSquareRoute } from './lib/route/generateSquareRoute';
 import { getWalingRoute } from './lib/route/getWalkingRoute';
 import { useCurrentLocation } from './hooks/useCurrentLocation';
+import { useAuth } from './hooks/useAuth';
 import { WalkingRoutePanel} from './components/WalkingRoutePanel';
+
 import '../styles/App.scss'
 // const TARGET_DISTANCE_METERS = 1000;
 
 function App() {
-    const [user, setUser] = useState<User | null>(null);
-    const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [routeCandidates, setRouteCandidates] = useState<WalkingRouteCandidate[]>([]);
     const [selectedRoute, setSelectedRoute] = useState<WalkingRouteCandidate | null>(null);
     const [previousRoute, setPreviousRoute] = useState<WalkingRouteCandidate | null>(null);
@@ -28,29 +26,14 @@ function App() {
     const [navigationNoticeOpen, setNavigationNoticeOpen] = useState(false);
     const [doNotShowAgain, setDoNotShowAgain] = useState(false);
     const currentLocation = useCurrentLocation();
-   useEffect(() => {
-       const initializeAuth = async () => {
-           const { data: { session }, error } = await supabase.auth.getSession();
+    const {
+        user,
+        isAuthLoading,
+        displayName,
+        handleGoogleLogin,
+        handleLogout
+    } = useAuth();
 
-           if (error) {
-               console.error('ログイン状態の確認に失敗しました。', error.message);
-           }
-
-           setUser(session?.user ?? null);
-           setIsAuthLoading(false);
-       };
-
-       void initializeAuth();
-
-       const { data: { subscription } } = supabase.auth.onAuthStateChange(
-           (_event, session) => {
-               setUser(session?.user ?? null);
-               setIsAuthLoading(false);
-           }
-       );
-
-       return () => subscription.unsubscribe();
-   }, []);
 
    const generateRouteCandidates = async () => {
         if (!currentLocation || isGeneratingRoutes) {
@@ -121,27 +104,6 @@ function App() {
        await generateRouteCandidates();
    };
 
-   const handleGoogleLogin = async () => {
-       const { error } = await supabase.auth.signInWithOAuth({
-           provider: 'google',
-           options: {
-               redirectTo: window.location.origin
-           }
-       });
-
-       if (error) {
-           console.error('Googleログインに失敗しました。', error.message);
-       }
-   };
-
-   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-
-    if(error) {
-        console.error('ログアウトに失敗しました', error.message);
-    }
-   }
-
     const handleCloseDialog = () => {
         setIsRouteDialogOpen(false);
         if (!selectedRoute && previousRoute) {
@@ -205,13 +167,6 @@ function App() {
         setSelectedRoute(null);
         setPreviousRoute(null);
     }
-
-   const displayName = user
-       ? user.user_metadata.full_name
-           ?? user.user_metadata.name
-           ?? user.email
-           ?? 'Googleユーザー'
-       : null;
 
   return (
       <>

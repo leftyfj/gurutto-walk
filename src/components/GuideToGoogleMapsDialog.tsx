@@ -38,7 +38,7 @@ export const GuideToGoogleMapsDialog = ({
                     経由地に到着すると、Googleマップの案内が一度止まります。
                     画面下の「次の目的地」を押すと、続きのルートが表示されます。
                     操作するときは、安全な場所に立ち止まってください。
-             </DialogContentText>
+                </DialogContentText>
               <FormControlLabel
                   sx={{ mt: 2 }}
                   control={
