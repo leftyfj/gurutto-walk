@@ -34,7 +34,6 @@ function App() {
         handleLogout
     } = useAuth();
 
-
    const generateRouteCandidates = async () => {
         if (!currentLocation || isGeneratingRoutes) {
             return;
