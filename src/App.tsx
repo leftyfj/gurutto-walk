@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
     Button,
-    CircularProgress,
     Container,
     Typography,
     Box,
@@ -14,17 +13,16 @@ import {
     InputLabel,
     Select,
     MenuItem,
-    DialogContentText,
-    FormControlLabel,
-    Checkbox
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import GoogleIcon from '@mui/icons-material/Google';
 import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
 import type { User } from '@supabase/supabase-js';
 import type { WalkingRouteCandidate } from './types/route';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { supabase } from './lib/supabase';
+import { Header } from './components/Header';
+import { AuthSection } from './components/AuthSection';
+import { GuideToGoogleMapsDialog } from './components/GuideToGoogleMapsDialog';
 import { GoogleMapArea } from './components/GoogleMapArea';
 import { generateSquareRoute } from './lib/route/generateSquareRoute';
 import { getWalingRoute } from './lib/route/getWalkingRoute';
@@ -247,256 +245,165 @@ function App() {
        : null;
 
   return (
-      <>
-          <Container maxWidth="sm" sx={{ py: 4 }}>
-              <Typography variant="h4" component="h1" gutterBottom>
-                  <span className="app-title__main">ぐるっと散歩</span>
-                  <span className="app-title__sub">Gurutto Walk</span>
-              </Typography>
-              <Typography align="center" sx={{ mb: 2 }}>
-                  歩きたい距離を選ぶだけ。
-                  <br />
-                  今いる場所へ戻って来られる散歩コースをご案内します。
-              </Typography>
-              <Box sx={{ textAlign: 'center' }}>
-                  {isAuthLoading ? (
-                      <Button
-                          variant="contained"
-                          disabled
-                          startIcon={
-                              <CircularProgress size={18} color="inherit" />
-                          }
-                      >
-                          ログイン状態を確認中
-                      </Button>
-                  ) : user ? (
-                      <>
-                          <Typography sx={{ mb: 1 }}>
-                              {displayName}さん、ログイン中
-                          </Typography>
-                          <Box sx={{ my: 1 }}>
-                              <Button
-                                  variant="text"
-                                  size="small"
-                                  onClick={handleLogout}
-                                  sx={{
-                                      mb: 0,
-                                      color: 'text.secondary',
-                                      textTransform: 'none'
-                                  }}
-                              >
-                                  ログアウト
-                              </Button>
-                          </Box>
-                          <FormControl
-                              size="small"
-                              sx={{ mb: 1, width: '80%' }}
-                          >
-                              <InputLabel id="distance-select-label">
-                                  歩きたい距離
-                              </InputLabel>
-                              <Select<number>
-                                  labelId="distance-select-label"
-                                  value={targetDistanceMeters}
-                                  label="歩きたい距離"
-                                  onChange={handleSelectDistance}
-                              >
-                                  <MenuItem value={1000}>1,000m</MenuItem>
-                                  <MenuItem value={2000}>2,000m</MenuItem>
-                                  <MenuItem value={3000}>3,000m</MenuItem>
-                                  <MenuItem value={4000}>4,000m</MenuItem>
-                                  <MenuItem value={5000}>5,000m</MenuItem>
-                              </Select>
-                          </FormControl>
-                          <Box sx={{ mt: 1 }}>
-                              <Button
-                                  size="small"
-                                  variant="contained"
-                                  startIcon={<RefreshIcon />}
-                                  onClick={handleRegenerateRoutes}
-                                  disabled={
-                                      !currentLocation || isGeneratingRoutes
-                                  }
-                                  sx={{ mb: 1 }}
-                              >
-                                  {isGeneratingRoutes
-                                      ? '生成中...'
-                                      : '新たにルートを生成'}
-                              </Button>
-                              {/* Googleマップをここに表示 */}
-                              <GoogleMapArea selectedRoute={selectedRoute} />
-                              {selectedRoute && (
-                                  <Button
-                                      variant="contained"
-                                      startIcon={<DirectionsWalkIcon />}
-                                      onClick={handleGoogleMapsClick}
-                                      sx={{ mt: 1 }}
-                                  >
-                                      Googleマップで歩く
-                                  </Button>
-                              )}
-                              {selectedRoute && (
-                                  <Typography
-                                      sx={{
-                                          mt: 2,
-                                          fontWeight: 'bold'
-                                      }}
-                                  >
-                                      {getDirectionLabel(
-                                          selectedRoute.initialBearing
-                                      )}
-                                      方向へ歩き始めます
-                                  </Typography>
-                              )}
-                          </Box>
-                      </>
-                  ) : (
-                      <Button
-                          className="google-login-button"
-                          variant="outlined"
-                          startIcon={<GoogleIcon />}
-                          onClick={handleGoogleLogin}
-                          sx={{
-                              color: 'text.primary',
-                              borderColor: 'divider',
-                              backgroundColor: 'background.paper',
-                              textTransform: 'none',
-                              px: 3,
-                              py: 1.2,
-                              '&:hover': {
-                                  backgroundColor: 'action.hover',
-                                  borderColor: 'text.secondary'
-                              }
-                          }}
-                      >
-                          Googleアカウントでログイン
-                      </Button>
-                  )}
-              </Box>
-          </Container>
-          <Dialog
-              open={isRouteDialogOpen}
-              //   onClose={() => setIsRouteDialogOpen(false)}
-              onClose={handleCloseDialog}
-              fullWidth
-              maxWidth="sm"
-          >
-              <DialogTitle>3つのルートを生成しました</DialogTitle>
+    <>
+        <Container maxWidth="sm" sx={{ py: 4 }}>
+            <Header />
+            <AuthSection
+                isAuthLoading={isAuthLoading}
+                user={user}
+                displayName={displayName}
+                onGoogleLogin={handleGoogleLogin}
+                onLogout={handleLogout}
+            >
+                <FormControl size="small" sx={{ mb: 1, width: '80%' }}>
+                    <InputLabel id="distance-select-label">
+                        歩きたい距離
+                    </InputLabel>
+                    <Select<number>
+                        labelId="distance-select-label"
+                        value={targetDistanceMeters}
+                        label="歩きたい距離"
+                        onChange={handleSelectDistance}
+                    >
+                        <MenuItem value={1000}>1,000m</MenuItem>
+                        <MenuItem value={2000}>2,000m</MenuItem>
+                        <MenuItem value={3000}>3,000m</MenuItem>
+                        <MenuItem value={4000}>4,000m</MenuItem>
+                        <MenuItem value={5000}>5,000m</MenuItem>
+                    </Select>
+                </FormControl>
+                {/* ルート生成ボタンなど */}
+                <Box sx={{ mt: 1 }}>
+                    <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<RefreshIcon />}
+                        onClick={handleRegenerateRoutes}
+                        disabled={!currentLocation || isGeneratingRoutes}
+                        sx={{ mb: 1 }}
+                    >
+                        {isGeneratingRoutes
+                            ? '生成中...'
+                            : '新たにルートを生成'}
+                    </Button>
+                    <GoogleMapArea selectedRoute={selectedRoute} />
+                    {selectedRoute && (
+                    <Button
+                        variant="contained"
+                        startIcon={<DirectionsWalkIcon />}
+                        onClick={handleGoogleMapsClick}
+                        sx={{ mt: 1 }}
+                    >
+                        Googleマップで歩く
+                    </Button>
+                    )}
+                    {selectedRoute && (
+                        <Typography
+                            sx={{
+                                mt: 1,
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            {getDirectionLabel(selectedRoute.initialBearing)}
+                            方向へ歩き始めます
+                        </Typography>
+                    )}
+                </Box>
+            </AuthSection>
+        </Container>
+        <Dialog
+            open={isRouteDialogOpen}
+            //   onClose={() => setIsRouteDialogOpen(false)}
+            onClose={handleCloseDialog}
+            fullWidth
+            maxWidth="sm"
+        >
+            <DialogTitle>3つのルートを生成しました</DialogTitle>
+            <DialogContent>
+                <Typography sx={{ mb: 2 }}>
+                    希望距離：
+                    {targetDistanceMeters.toLocaleString()}m
+                </Typography>
 
-              <DialogContent>
-                  <Typography sx={{ mb: 2 }}>
-                      希望距離：
-                      {targetDistanceMeters.toLocaleString()}m
-                  </Typography>
+                <Stack spacing={2}>
+                    {routeCandidates.map((candidate) => {
+                        const difference =
+                            candidate.actualDistanceMeters -
+                            targetDistanceMeters;
 
-                  <Stack spacing={2}>
-                      {routeCandidates.map((candidate) => {
-                          const difference =
-                              candidate.actualDistanceMeters -
-                              targetDistanceMeters;
+                        const formattedDifference =
+                            difference === 0
+                                ? '±0m'
+                                : difference > 0
+                                ? `+${difference.toLocaleString()}m`
+                                : `${difference.toLocaleString()}m`;
 
-                          const formattedDifference =
-                              difference === 0
-                                  ? '±0m'
-                                  : difference > 0
-                                    ? `+${difference.toLocaleString()}m`
-                                    : `${difference.toLocaleString()}m`;
+                        return (
+                            <Stack
+                                key={candidate.id}
+                                direction="row"
+                                sx={{
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 1
+                                }}
+                                spacing={2}
+                            >
+                                <Typography
+                                    sx={{ minWidth: 20, fontWeight: 'bold' }}
+                                >
+                                    {candidate.id}
+                                </Typography>
 
-                          return (
-                              <Stack
-                                  key={candidate.id}
-                                  direction="row"
-                                  sx={{
-                                      alignItems: 'center',
-                                      justifyContent: 'space-between',
-                                      gap: 1
-                                  }}
-                                  spacing={2}
-                              >
-                                  <Typography
-                                      sx={{ minWidth: 20, fontWeight: 'bold' }}
-                                  >
-                                      {candidate.id}
-                                  </Typography>
+                                <Typography sx={{ whiteSpace: 'nowrap' }}>
+                                    {candidate.actualDistanceMeters.toLocaleString()}
+                                    m
+                                </Typography>
+                                <Typography
+                                    variant="body2"
+                                    sx={{ flex: 1, textAlign: 'center' }}
+                                >
+                                    差：
+                                    {formattedDifference}
+                                </Typography>
+                                <Button
+                                    size="small"
+                                    variant="contained"
+                                    onClick={() =>
+                                        handleSelectRoute(candidate)
+                                    }
+                                    sx={{ whiteSpace: 'nowrap' }}
+                                >
+                                    選ぶ
+                                </Button>
+                            </Stack>
+                        );
+                    })}
+                </Stack>
+            </DialogContent>
 
-                                  <Typography sx={{ whiteSpace: 'nowrap' }}>
-                                      {candidate.actualDistanceMeters.toLocaleString()}
-                                      m
-                                  </Typography>
-                                  <Typography
-                                      variant="body2"
-                                      sx={{ flex: 1, textAlign: 'center' }}
-                                  >
-                                      差：
-                                      {formattedDifference}
-                                  </Typography>
-                                  <Button
-                                      size="small"
-                                      variant="contained"
-                                      onClick={() =>
-                                          handleSelectRoute(candidate)
-                                      }
-                                      sx={{ whiteSpace: 'nowrap' }}
-                                  >
-                                      選ぶ
-                                  </Button>
-                              </Stack>
-                          );
-                      })}
-                  </Stack>
-              </DialogContent>
+            <DialogActions>
+                <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<RefreshIcon />}
+                    onClick={generateRouteCandidates}
+                    disabled={isGeneratingRoutes}
+                >
+                    {isGeneratingRoutes ? '生成中...' : '別のルートを再生成'}
+                </Button>
+                <Button onClick={handleCloseDialog}>閉じる</Button>
+            </DialogActions>
+        </Dialog>
 
-              <DialogActions>
-                  <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<RefreshIcon />}
-                      onClick={generateRouteCandidates}
-                      disabled={isGeneratingRoutes}
-                  >
-                      {isGeneratingRoutes ? '生成中...' : '別のルートを再生成'}
-                  </Button>
-                  <Button onClick={handleCloseDialog}>閉じる</Button>
-              </DialogActions>
-          </Dialog>
-          <Dialog
-              open={navigationNoticeOpen}
-              onClose={() => setNavigationNoticeOpen(false)}
-              fullWidth
-              maxWidth="xs"
-          >
-              <DialogTitle>Googleマップの案内について</DialogTitle>
-
-              <DialogContent>
-                  <DialogContentText>
-                      経由地に到着すると、Googleマップの案内が一度止まります。
-                      画面下の「次の目的地」を押すと、続きのルートが表示されます。
-                      操作するときは、安全な場所に立ち止まってください。
-                  </DialogContentText>
-                  <FormControlLabel
-                      sx={{ mt: 2 }}
-                      control={
-                          <Checkbox
-                              checked={doNotShowAgain}
-                              onChange={(event) =>
-                                  setDoNotShowAgain(event.target.checked)
-                              }
-                          />
-                      }
-                      label="今後この案内を表示しない"
-                  />
-              </DialogContent>
-              <DialogActions>
-                  <Button onClick={() => setNavigationNoticeOpen(false)}>
-                      キャンセル
-                  </Button>
-
-                  <Button variant="contained" onClick={handleStartNavigation}>
-                      Googleマップを開く
-                  </Button>
-              </DialogActions>
-          </Dialog>
-      </>
+        <GuideToGoogleMapsDialog
+            open={navigationNoticeOpen}
+            doNotShowAgain={doNotShowAgain}
+            onClose={()=> setNavigationNoticeOpen(false)}
+            onDoNotShowAgainChange={setDoNotShowAgain}
+            onStartNavigation={handleStartNavigation}
+        />
+    </>
   );
 }
 
