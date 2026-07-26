@@ -1,21 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-    Button,
-    Container,
-    Typography,
-    Box,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Stack,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-} from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
+import { Container } from '@mui/material';
 import type { User } from '@supabase/supabase-js';
 import type { WalkingRouteCandidate } from './types/route';
 import type { SelectChangeEvent } from '@mui/material/Select';
@@ -23,10 +7,12 @@ import { supabase } from './lib/supabase';
 import { Header } from './components/Header';
 import { AuthSection } from './components/AuthSection';
 import { GuideToGoogleMapsDialog } from './components/GuideToGoogleMapsDialog';
-import { GoogleMapArea } from './components/GoogleMapArea';
+
+import { RouteSelectionDialog } from './components/RouteSelectionDialog';
 import { generateSquareRoute } from './lib/route/generateSquareRoute';
 import { getWalingRoute } from './lib/route/getWalkingRoute';
 import { useCurrentLocation } from './hooks/useCurrentLocation';
+import { WalkingRoutePanel} from './components/WalkingRoutePanel';
 import '../styles/App.scss'
 // const TARGET_DISTANCE_METERS = 1000;
 
@@ -213,29 +199,12 @@ function App() {
         setNavigationNoticeOpen(false);
         openGoogleMaps();
     };
-    const getDirectionLabel = (bearing: number) => {
-        const directions = [
-            '北',
-            '北東',
-            '東',
-            '南東',
-            '南',
-            '南西',
-            '西',
-            '北西'
-        ];
-
-        const index = Math.round(bearing / 45) % 8;
-
-        return directions[index];
-    };
 
     const handleSelectDistance = (event:SelectChangeEvent<number>) => {
         setTargetDistanceMeters(Number(event.target.value));
         setSelectedRoute(null);
         setPreviousRoute(null);
     }
-
 
    const displayName = user
        ? user.user_metadata.full_name
@@ -245,166 +214,45 @@ function App() {
        : null;
 
   return (
-    <>
-        <Container maxWidth="sm" sx={{ py: 4 }}>
-            <Header />
-            <AuthSection
-                isAuthLoading={isAuthLoading}
-                user={user}
-                displayName={displayName}
-                onGoogleLogin={handleGoogleLogin}
-                onLogout={handleLogout}
-            >
-                <FormControl size="small" sx={{ mb: 1, width: '80%' }}>
-                    <InputLabel id="distance-select-label">
-                        歩きたい距離
-                    </InputLabel>
-                    <Select<number>
-                        labelId="distance-select-label"
-                        value={targetDistanceMeters}
-                        label="歩きたい距離"
-                        onChange={handleSelectDistance}
-                    >
-                        <MenuItem value={1000}>1,000m</MenuItem>
-                        <MenuItem value={2000}>2,000m</MenuItem>
-                        <MenuItem value={3000}>3,000m</MenuItem>
-                        <MenuItem value={4000}>4,000m</MenuItem>
-                        <MenuItem value={5000}>5,000m</MenuItem>
-                    </Select>
-                </FormControl>
-                {/* ルート生成ボタンなど */}
-                <Box sx={{ mt: 1 }}>
-                    <Button
-                        size="small"
-                        variant="contained"
-                        startIcon={<RefreshIcon />}
-                        onClick={handleRegenerateRoutes}
-                        disabled={!currentLocation || isGeneratingRoutes}
-                        sx={{ mb: 1 }}
-                    >
-                        {isGeneratingRoutes
-                            ? '生成中...'
-                            : '新たにルートを生成'}
-                    </Button>
-                    <GoogleMapArea selectedRoute={selectedRoute} />
-                    {selectedRoute && (
-                    <Button
-                        variant="contained"
-                        startIcon={<DirectionsWalkIcon />}
-                        onClick={handleGoogleMapsClick}
-                        sx={{ mt: 1 }}
-                    >
-                        Googleマップで歩く
-                    </Button>
-                    )}
-                    {selectedRoute && (
-                        <Typography
-                            sx={{
-                                mt: 1,
-                                fontWeight: 'bold'
-                            }}
-                        >
-                            {getDirectionLabel(selectedRoute.initialBearing)}
-                            方向へ歩き始めます
-                        </Typography>
-                    )}
-                </Box>
-            </AuthSection>
-        </Container>
-        <Dialog
-            open={isRouteDialogOpen}
-            //   onClose={() => setIsRouteDialogOpen(false)}
-            onClose={handleCloseDialog}
-            fullWidth
-            maxWidth="sm"
-        >
-            <DialogTitle>3つのルートを生成しました</DialogTitle>
-            <DialogContent>
-                <Typography sx={{ mb: 2 }}>
-                    希望距離：
-                    {targetDistanceMeters.toLocaleString()}m
-                </Typography>
-
-                <Stack spacing={2}>
-                    {routeCandidates.map((candidate) => {
-                        const difference =
-                            candidate.actualDistanceMeters -
-                            targetDistanceMeters;
-
-                        const formattedDifference =
-                            difference === 0
-                                ? '±0m'
-                                : difference > 0
-                                ? `+${difference.toLocaleString()}m`
-                                : `${difference.toLocaleString()}m`;
-
-                        return (
-                            <Stack
-                                key={candidate.id}
-                                direction="row"
-                                sx={{
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    gap: 1
-                                }}
-                                spacing={2}
-                            >
-                                <Typography
-                                    sx={{ minWidth: 20, fontWeight: 'bold' }}
-                                >
-                                    {candidate.id}
-                                </Typography>
-
-                                <Typography sx={{ whiteSpace: 'nowrap' }}>
-                                    {candidate.actualDistanceMeters.toLocaleString()}
-                                    m
-                                </Typography>
-                                <Typography
-                                    variant="body2"
-                                    sx={{ flex: 1, textAlign: 'center' }}
-                                >
-                                    差：
-                                    {formattedDifference}
-                                </Typography>
-                                <Button
-                                    size="small"
-                                    variant="contained"
-                                    onClick={() =>
-                                        handleSelectRoute(candidate)
-                                    }
-                                    sx={{ whiteSpace: 'nowrap' }}
-                                >
-                                    選ぶ
-                                </Button>
-                            </Stack>
-                        );
-                    })}
-                </Stack>
-            </DialogContent>
-
-            <DialogActions>
-                <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<RefreshIcon />}
-                    onClick={generateRouteCandidates}
-                    disabled={isGeneratingRoutes}
-                >
-                    {isGeneratingRoutes ? '生成中...' : '別のルートを再生成'}
-                </Button>
-                <Button onClick={handleCloseDialog}>閉じる</Button>
-            </DialogActions>
-        </Dialog>
-
-        <GuideToGoogleMapsDialog
-            open={navigationNoticeOpen}
-            doNotShowAgain={doNotShowAgain}
-            onClose={()=> setNavigationNoticeOpen(false)}
-            onDoNotShowAgainChange={setDoNotShowAgain}
-            onStartNavigation={handleStartNavigation}
-        />
-    </>
+      <>
+          <Container maxWidth="sm" sx={{ py: 4 }}>
+              <Header />
+              <AuthSection
+                  isAuthLoading={isAuthLoading}
+                  user={user}
+                  displayName={displayName}
+                  onGoogleLogin={handleGoogleLogin}
+                  onLogout={handleLogout}
+              >
+                  <WalkingRoutePanel
+                      targetDistanceMeters={targetDistanceMeters}
+                      selectedRoute={selectedRoute}
+                      currentLocation={currentLocation}
+                      isGeneratingRoutes={isGeneratingRoutes}
+                      onSelectDistance={handleSelectDistance}
+                      onRegenerateRoutes={handleRegenerateRoutes}
+                      onGoogleMapsClick={handleGoogleMapsClick}
+                  />
+              </AuthSection>
+              <RouteSelectionDialog
+                  open={isRouteDialogOpen}
+                  routeCandidates={routeCandidates}
+                  targetDistanceMeters={targetDistanceMeters}
+                  isGeneratingRoutes={isGeneratingRoutes}
+                  onClose={handleCloseDialog}
+                  onSelectRoute={handleSelectRoute}
+                  onRegenerateRoutes={generateRouteCandidates}
+              />
+              <GuideToGoogleMapsDialog
+                  open={navigationNoticeOpen}
+                  doNotShowAgain={doNotShowAgain}
+                  onClose={() => setNavigationNoticeOpen(false)}
+                  onDoNotShowAgainChange={setDoNotShowAgain}
+                  onStartNavigation={handleStartNavigation}
+              />
+          </Container>
+      </>
   );
-}
+};
 
 export default App
