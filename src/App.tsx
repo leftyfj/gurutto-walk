@@ -24,8 +24,6 @@ function App() {
     const [isRouteDialogOpen, setIsRouteDialogOpen] = useState(false);
     const [isGeneratingRoutes, setIsGeneratingRoutes] = useState(false);
     const [targetDistanceMeters, setTargetDistanceMeters] = useState(1000);
-    // const [navigationNoticeOpen, setNavigationNoticeOpen] = useState(false);
-    // const [doNotShowAgain, setDoNotShowAgain] = useState(false);
     const currentLocation = useCurrentLocation();
     const {
         user,
